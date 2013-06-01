@@ -1,0 +1,11 @@
+*.d
+*.o
+*.a
+
+lock_demo
+lock_tester
+lock_server
+rpc/rpctest
+
+cscope.files
+cscope.out
