@@ -12,6 +12,7 @@
 class lock_client {
  protected:
     rpcc *cl;
+
  public:
     lock_client(std::string d);
     virtual ~lock_client() {};
