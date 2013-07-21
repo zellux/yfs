@@ -6,6 +6,7 @@
 
 #include <string>
 #include <map>
+#include <stdlib.h>
 #include <pthread.h>
 
 #include "lock_protocol.h"

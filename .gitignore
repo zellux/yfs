@@ -1,6 +1,7 @@
 *.d
 *.o
 *.a
+*.log
 
 lock_demo
 lock_tester

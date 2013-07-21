@@ -583,6 +583,9 @@ rpcs::dispatch(djob_t *j)
 
     switch (stat) {
     case NEW: // new request
+        jsl_log(JSL_DBG_2,
+                "rpcs::dispatch: a new request from %u, xid %u\n",
+                h.clt_nonce, h.xid);
         if (counting_) {
             updatestat(proc);
         }
@@ -626,8 +629,12 @@ rpcs::dispatch(djob_t *j)
         }
         break;
     case INPROGRESS: // server is working on this request
+        jsl_log(JSL_DBG_2, "rpcs::dispatch: in progress request %u from %u, skipped\n", 
+                h.xid, h.clt_nonce);
         break;
     case DONE: // duplicate and we still have the response
+        jsl_log(JSL_DBG_2, "rpcs::dispatch: finished request %u from %u\n", 
+                h.xid, h.clt_nonce);
         c->send(b1, sz1);
         break;
     case FORGOTTEN: // very old request and we don't have the response anymore
@@ -661,8 +668,42 @@ rpcs::checkduplicate_and_update(unsigned int clt_nonce, unsigned int xid,
 {
     ScopedLock rwl(&reply_window_m_);
 
+    rpcstate_t ret = NEW;
+
     // You fill this in for Lab 1.
-    return NEW;
+    std::list<reply_t> &list = reply_window_[clt_nonce];
+    std::list<reply_t>::iterator iter;
+
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (iter->xid == xid) {
+            if (iter->cb_present && iter->sz > 0) {
+                ret = DONE;
+                *b = iter->buf;
+                *sz = iter->sz;
+            } else if (iter->cb_present)
+                ret = FORGOTTEN;
+            else
+                ret = INPROGRESS;
+            goto cleanup;
+        }
+        if (iter->xid > xid) {
+            list.insert(iter, reply_t(xid));
+            goto cleanup;
+        }
+    }
+    list.push_back(reply_t(xid));
+
+ cleanup:
+    
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (iter->xid > xid_rep)
+            break;
+        iter->sz = 0;
+        free(iter->buf);
+        iter->buf = NULL;
+    }
+
+    return ret;
 }
 
 // rpcs::dispatch calls add_reply when it is sending a reply to an RPC,
@@ -675,7 +716,18 @@ rpcs::add_reply(unsigned int clt_nonce, unsigned int xid,
                 char *b, int sz)
 {
     ScopedLock rwl(&reply_window_m_);
-    // You fill this in for Lab 1.
+
+    std::list<reply_t> &list = reply_window_[clt_nonce];
+    std::list<reply_t>::iterator iter;
+    
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (iter->xid == xid) {
+            iter->buf = b;
+            iter->sz = sz;
+            iter->cb_present = true;
+            break;
+        }
+    }
 }
 
 void
