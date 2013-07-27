@@ -32,7 +32,7 @@ check_grant(lock_protocol::lockid_t lid)
 {
     ScopedLock ml(&count_mutex);
     int x = lid & 0xff;
-    if(ct[x] != 0) {
+    if (ct[x] != 0) {
         fprintf(stderr, "error: server granted %016llx twice\n", lid);
         fprintf(stdout, "error: server granted %016llx twice\n", lid);
         exit(1);
@@ -45,7 +45,7 @@ check_release(lock_protocol::lockid_t lid)
 {
     ScopedLock ml(&count_mutex);
     int x = lid & 0xff;
-    if(ct[x] != 1){
+    if (ct[x] != 1) {
         fprintf(stderr, "error: client released un-held lock %016llx\n",  lid);
         exit(1);
     }
@@ -156,7 +156,7 @@ main(int argc, char *argv[])
 
     // jsl_set_debug(2);
 
-    if(argc < 2) {
+    if (argc < 2) {
         fprintf(stderr, "Usage: %s [host:]port [test]\n", argv[0]);
         exit(1);
     }
@@ -165,7 +165,7 @@ main(int argc, char *argv[])
 
     if (argc > 2) {
         test = atoi(argv[2]);
-        if(test < 1 || test > 5){
+        if (test < 1 || test > 5) {
             printf("Test number must be between 1 and 5\n");
             exit(1);
         }
@@ -175,11 +175,11 @@ main(int argc, char *argv[])
     printf("simple lock client\n");
     for (int i = 0; i < nt; i++) lc[i] = new lock_client(dst);
 
-    if(!test || test == 1){
+    if (!test || test == 1) {
         test1();
     }
 
-    if(!test || test == 2){
+    if (!test || test == 2) {
         // test2
         for (int i = 0; i < nt; i++) {
             int *a = new int (i);
@@ -191,7 +191,7 @@ main(int argc, char *argv[])
         }
     }
 
-    if(!test || test == 3){
+    if (!test || test == 3) {
         printf("test 3\n");
       
         // test3
@@ -205,7 +205,7 @@ main(int argc, char *argv[])
         }
     }
 
-    if(!test || test == 4){
+    if (!test || test == 4) {
         printf("test 4\n");
       
         // test 4
@@ -219,7 +219,7 @@ main(int argc, char *argv[])
         }
     }
 
-    if(!test || test == 5){
+    if (!test || test == 5) {
         printf("test 5\n");
       
         // test 5
