@@ -171,12 +171,13 @@ yfs_client::create(inum parent, inum &inum, const char *name)
     }
 
     // FIXME: theoratically possible inum collision
-    inum = rand() & ~YFS_DIR_FLAG;
+    inum = rand() | YFS_DIR_FLAG;
     newcontent << content;
     newcontent << inum << std::endl;
     newcontent << name << std::endl;
 
-    if (ec->put(parent, newcontent.str()) != extent_protocol::OK) {
+    if ((ec->put(parent, newcontent.str()) != extent_protocol::OK) ||
+        (ec->put(inum, std::string()) != extent_protocol::OK)) {
         r = IOERR;
         goto release;
     }
