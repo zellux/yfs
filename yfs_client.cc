@@ -213,3 +213,22 @@ yfs_client::read(inum inum, unsigned offset, unsigned size, std::string &buffer)
     return r;
 }
 
+int
+yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
+{
+    int r = OK;
+    std::string content;
+
+    if (ec->get(inum, content) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+    content = content.substr(0, offset) + buffer;
+    if (ec->put(inum, content) != extent_protocol::OK) {
+        r = IOERR;
+        goto release;
+    }
+
+ release:
+    return r;
+}

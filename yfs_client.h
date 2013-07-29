@@ -52,6 +52,7 @@ class yfs_client {
     int lookup(const char *, inum, inum &);
     int setsize(inum, unsigned int);
     int read(inum, unsigned, unsigned, std::string &);
+    int write(inum, unsigned, unsigned, std::string);
 };
 
 #endif
