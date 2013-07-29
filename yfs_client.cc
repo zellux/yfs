@@ -100,8 +100,6 @@ yfs_client::lookup(const char *name, inum parent, inum &inum)
     if (r != OK)
         goto release;
 
-    parse_dir(content, list);
-
     for (iter = list.begin(); iter != list.end(); iter++) {
         if (iter->name == name) {
             inum = iter->inum;

@@ -36,6 +36,7 @@ class yfs_client {
  private:
     static std::string filename(inum);
     static inum n2i(std::string);
+    static void parse_dir(const std::string, std::vector<dirent> &);
 
  public:
 
@@ -49,8 +50,6 @@ class yfs_client {
     int create(inum, inum &, const char *);
     int readdir(inum, std::vector<dirent> &);
     int lookup(const char *, inum, inum &);
-
-    static void parse_dir(const std::string, std::vector<dirent> &);
 };
 
 #endif
