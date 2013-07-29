@@ -6,10 +6,12 @@
 #include "extent_client.h"
 #include <vector>
 
+#define YFS_DIR_FLAG 0x80000000
 
 class yfs_client {
     extent_client *ec;
  public:
+    static const int MAX_FILENAME_LENGTH = 256;
 
     typedef unsigned long long inum;
     enum xxstatus { OK, RPCERR, NOENT, IOERR, EXIST };
