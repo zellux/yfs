@@ -102,6 +102,7 @@ extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
 
     printf("getattr %016llx\n", id);
     if (!is.is_open()) {
+        printf("  not exist\n");
         ret = extent_protocol::NOENT;
         goto release;
     }
@@ -120,13 +121,19 @@ extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
 int
 extent_server::remove(extent_protocol::extentid_t id, int &)
 {
+    int ret = extent_protocol::OK;
     std::ifstream is(local_path(id).c_str());
-    if (is.is_open())
-        return extent_protocol::NOENT;
-    is.close();
 
+    printf("remove %016llx", id);
+    if (is.is_open()) {
+        printf("  not exist\n");
+        ret = extent_protocol::NOENT;
+        goto release;
+    }
+    is.close();
     if (::remove(local_path(id).c_str()))
-        return extent_protocol::IOERR;
-    else
-        return extent_protocol::OK;
+        ret = extent_protocol::IOERR;
+
+ release:
+    return ret;
 }

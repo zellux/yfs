@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+rm -f objects/*
+
 ulimit -c unlimited
 
 LOSSY=$1
