@@ -50,7 +50,7 @@ extent_client::setsize(extent_protocol::extentid_t eid, unsigned int size)
 {
     extent_protocol::status ret = extent_protocol::OK;
     int r;
-    ret = cl->call(extent_protocol::put, eid, size);
+    ret = cl->call(extent_protocol::setsize, eid, size, r);
     return ret;
 }
 

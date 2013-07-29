@@ -139,7 +139,7 @@ extent_server::remove(extent_protocol::extentid_t id, int &)
 }
 
 int
-extent_server::setsize(extent_protocol::extentid_t id, unsigned int size)
+extent_server::setsize(extent_protocol::extentid_t id, unsigned int size, int &)
 {
     int ret = extent_protocol::OK;
     std::ifstream is(local_path(id).c_str());
