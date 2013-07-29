@@ -219,13 +219,23 @@ yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
 {
     int r = OK;
     std::string content;
+    std::string head, mid, tail;
 
     printf("   write %016llx offset %u size %u\n", inum, offset, size);
     if (ec->get(inum, content) != extent_protocol::OK) {
         r = NOENT;
         goto release;
     }
-    content = content.substr(0, offset) + buffer.substr(0, size);
+    head = content.substr(0, offset);
+    if (offset > content.size())
+        head += std::string(offset - content.size(), '\0');
+    mid = buffer.substr(0, size);
+    if (offset + size < content.size())
+        tail = content.substr(offset + size, content.size() - offset - size);
+    printf("   head: %s\n", head.c_str());
+    printf("   mid : %s\n", mid.c_str());
+    printf("   tail: %s\n", tail.c_str());
+    content = head + mid + tail;
     if (ec->put(inum, content) != extent_protocol::OK) {
         r = IOERR;
         goto release;
