@@ -151,14 +151,11 @@ void
 fuseserver_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                 off_t off, struct fuse_file_info *fi)
 {
-    // You fill this in for Lab 2
-#if 0
+    yfs_client::inum inum = ino;
     std::string buf;
-    // Change the above "#if 0" to "#if 1", and your code goes here
+
+    yfs->read(inum, off, size, buf);
     fuse_reply_buf(req, buf.data(), buf.size());
-#else
-    fuse_reply_err(req, ENOSYS);
-#endif
 }
 
 //

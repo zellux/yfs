@@ -196,3 +196,20 @@ yfs_client::setsize(inum inum, unsigned int size)
 
     return r;
 }
+
+int
+yfs_client::read(inum inum, unsigned offset, unsigned size, std::string &buffer)
+{
+    int r = OK;
+    std::string content;
+
+    if (ec->get(inum, content) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+    buffer = content.substr(offset, size);
+
+ release:
+    return r;
+}
+

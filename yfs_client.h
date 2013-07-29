@@ -51,6 +51,7 @@ class yfs_client {
     int readdir(inum, std::vector<dirent> &);
     int lookup(const char *, inum, inum &);
     int setsize(inum, unsigned int);
+    int read(inum, unsigned, unsigned, std::string &);
 };
 
 #endif
