@@ -289,6 +289,7 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
         goto finish;
 
     e.ino = inum;
+    found = true;
 
  finish:
     if (found)
