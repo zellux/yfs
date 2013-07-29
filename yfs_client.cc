@@ -86,6 +86,34 @@ yfs_client::getdir(inum inum, dirinfo &din)
  release:
     return r;
 }
+
+int
+yfs_client::lookup(const char *name, inum &inum)
+{
+    int r = OK;
+    std::string content;
+    std::list<dirent> list;
+    std::list<dirent>::iterator iter;
+
+   printf("lookup %s in %016llx\n", name, inum);
+    r = readdir(inum, content);
+    if (r != OK)
+        goto release;
+
+    parse_dir(content, list);
+
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (iter->name == name) {
+            inum = iter->inum;
+            goto release;
+        }
+    }
+    r = NOENT;
+
+ release:
+    return r;
+}
+
 int
 yfs_client::readdir(inum inum, std::string &content)
 {

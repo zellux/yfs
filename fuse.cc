@@ -279,9 +279,18 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     e.entry_timeout = 0.0;
     e.generation = 0;
     bool found = false;
+    yfs_client::inum inum;
+    yfs_client::status ret;
+        
+    if ((ret = yfs->lookup(name, inum)) != yfs_client::OK)
+        goto finish;
 
-    // You fill this in for Lab 2
-    
+    if ((ret = getattr(inum, e.attr)) != yfs_client::OK)
+        goto finish;
+
+    e.ino = inum;
+
+ finish:
     if (found)
         fuse_reply_entry(req, &e);
     else
@@ -340,10 +349,7 @@ fuseserver_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 
     memset(&b, 0, sizeof(b));
 
-
     // You fill this in for Lab 2
-
-
     reply_buf_limited(req, b.p, b.size, off, size);
     free(b.p);
 }
