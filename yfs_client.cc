@@ -92,11 +92,11 @@ yfs_client::lookup(const char *name, inum parent, inum &inum)
 {
     int r = OK;
     std::string content;
-    std::list<dirent> list;
-    std::list<dirent>::iterator iter;
+    std::vector<dirent> list;
+    std::vector<dirent>::iterator iter;
 
     printf("lookup %s in %016llx\n", name, parent);
-    r = readdir(parent, content);
+    r = readdir(parent, list);
     if (r != OK)
         goto release;
 
@@ -115,23 +115,24 @@ yfs_client::lookup(const char *name, inum parent, inum &inum)
 }
 
 int
-yfs_client::readdir(inum inum, std::string &content)
+yfs_client::readdir(inum inum, std::vector<dirent> &list)
 {
     int r = OK;
+    std::string content;
 
     printf("readdir %016llx\n", inum);
-
     if (ec->get(inum, content) != extent_protocol::OK) {
         r = NOENT;
         goto release;
     }
+    parse_dir(content, list);
 
  release:
     return r;
 }
 
 void
-yfs_client::parse_dir(const std::string content, std::list<dirent> &list)
+yfs_client::parse_dir(const std::string content, std::vector<dirent> &list)
 {
     std::istringstream ist(content);
     std::string buffer;
@@ -149,17 +150,17 @@ int
 yfs_client::create(inum parent, inum &inum, const char *name)
 {
     int r = OK;
+    std::string content;
     std::ostringstream newcontent;
-    std::list<dirent>::iterator iter;
+    std::vector<dirent> list;
+    std::vector<dirent>::iterator iter;
 
     printf("create a new file in %016llx <%s>\n", parent, name);
 
-    std::string content;
-    std::list<dirent> list;
-
-    r = readdir(parent, content);
-    if (r != OK)
+    if (ec->get(parent, content) != extent_protocol::OK) {
+        r = NOENT;
         goto release;
+    }
 
     // filename duplication check
     parse_dir(content, list);

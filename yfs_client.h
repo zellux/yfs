@@ -47,10 +47,10 @@ class yfs_client {
     int getfile(inum, fileinfo &);
     int getdir(inum, dirinfo &);
     int create(inum, inum &, const char *);
-    int readdir(inum, std::string &);
+    int readdir(inum, std::vector<dirent> &);
     int lookup(const char *, inum, inum &);
 
-    static void parse_dir(const std::string, std::list<dirent> &);
+    static void parse_dir(const std::string, std::vector<dirent> &);
 };
 
 #endif
