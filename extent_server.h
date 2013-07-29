@@ -21,6 +21,7 @@ class extent_server {
 
  private:
     inline const std::string local_path(extent_protocol::extentid_t id);
+    void save(extent_protocol::extentid_t, const extent_protocol::attr &, const std::string &);
     static const int HEADER_SIZE = sizeof(((extent_protocol::attr *) 0)->size) +
         sizeof(((extent_protocol::attr *) 0)->atime) +
         sizeof(((extent_protocol::attr *) 0)->mtime) +

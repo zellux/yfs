@@ -35,6 +35,16 @@ operator>>(std::ifstream &m, extent_protocol::attr &a)
     return m;
 }
 
+void
+extent_server::save(extent_protocol::extentid_t id,
+                    const extent_protocol::attr &a,
+                    const std::string &c)
+{
+    std::ofstream os(local_path(id).c_str(), std::ios::trunc);
+    os << a << c;
+    os.close();
+}
+
 int
 extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 {
@@ -52,53 +62,59 @@ extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
     attr.size = buf.size();
     is.close();
 
-    std::ofstream os(local_path(id).c_str(), std::ios::trunc);
-    os << attr << buf;
-    os.close();
+    save(id, attr, buf);
 
-    // truncate(local_path(id).c_str(), os.tellp());
-    
     return extent_protocol::OK;
 }
 
 int
 extent_server::get(extent_protocol::extentid_t id, std::string &buf)
 {
+    int ret = extent_protocol::OK;
     extent_protocol::attr attr;
-    printf("get %016llx\n", id);
     std::ifstream is(local_path(id).c_str());
+
+    printf("get %016llx\n", id);
     if (!is.is_open()) {
         printf("not exist.\n");
-        return extent_protocol::NOENT;
+        ret = extent_protocol::NOENT;
+        goto release;
     }
-        
+
     is >> attr;
     buf.resize(attr.size);
     is.read(&buf[0], attr.size);
     is.close();
-    return extent_protocol::OK;
+
+    attr.atime = time(NULL);
+    save(id, attr, buf);
+
+ release:
+    return ret;
 }
 
 int
 extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
 {
-    // You fill this in for Lab 2.
-    // You replace this with a real implementation. We send a phony response
-    // for now because it's difficult to get FUSE to do anything (including
-    // unmount) if getattr fails.
+    int ret = extent_protocol::OK;
     std::ifstream is(local_path(id).c_str());
-    if (is.is_open())
-        return extent_protocol::NOENT;
+    std::string temp;
+
+    printf("getattr %016llx\n", id);
+    if (!is.is_open()) {
+        ret = extent_protocol::NOENT;
+        goto release;
+    }
     is >> a;
+    temp.resize(a.size);
+    is.read(&temp[0], a.size);
     is.close();
-    
+
     a.atime = time(NULL);
-    std::ofstream os(local_path(id).c_str(), std::ios::binary);
-    os.seekp(0);
-    os << a;
-    os.close();
-    
-    return extent_protocol::OK;
+    save(id, a, temp);
+
+ release:
+    return ret;
 }
 
 int
