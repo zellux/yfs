@@ -13,13 +13,35 @@
 
 extent_server::extent_server() {}
 
+inline std::ofstream &
+operator<<(std::ofstream &m, extent_protocol::attr a)
+{
+    m << a.atime << std::endl;
+    m << a.mtime << std::endl;
+    m << a.ctime << std::endl;
+    m << a.size << std::endl;
+    return m;
+}
+
+inline std::ifstream &
+operator>>(std::ifstream &m, extent_protocol::attr &a)
+{
+    std::string endl;
+    m >> a.atime;
+    m >> a.mtime;
+    m >> a.ctime;
+    m >> a.size;
+    std::getline(m, endl);
+    return m;
+}
+
 int
 extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 {
     extent_protocol::attr attr;
     std::ifstream is(local_path(id).c_str(), std::ios::binary);
     if (is.is_open()) {
-        is >> attr.size >> attr.atime >> attr.mtime >> attr.ctime;
+        is >> attr;
     } else {
         time_t current = time(NULL);
         attr.size = buf.size();
@@ -29,9 +51,8 @@ extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
     }
     is.close();
 
-    std::ofstream os(local_path(id).c_str(), std::ios::binary);
-    os << attr.size << attr.atime <<  attr.mtime << attr.ctime;
-    os << buf;
+    std::ofstream os(local_path(id).c_str(), std::ios::trunc);
+    os << attr << buf;
     os.close();
 
     truncate(local_path(id).c_str(), buf.size() + HEADER_SIZE);
@@ -47,7 +68,7 @@ extent_server::get(extent_protocol::extentid_t id, std::string &buf)
     if (is.is_open())
         return extent_protocol::NOENT;
         
-    is >> attr.size >> attr.atime >> attr.mtime >> attr.ctime;
+    is >> attr;
     buf.resize(attr.size);
     is.read(&buf[0], attr.size);
     is.close();
@@ -61,16 +82,16 @@ extent_server::getattr(extent_protocol::extentid_t id, extent_protocol::attr &a)
     // You replace this with a real implementation. We send a phony response
     // for now because it's difficult to get FUSE to do anything (including
     // unmount) if getattr fails.
-    std::ifstream is(local_path(id).c_str(), std::ios::binary);
+    std::ifstream is(local_path(id).c_str());
     if (is.is_open())
         return extent_protocol::NOENT;
-    is >> a.size >> a.atime >> a.mtime >> a.ctime;
+    is >> a;
     is.close();
     
     a.atime = time(NULL);
     std::ofstream os(local_path(id).c_str(), std::ios::binary);
     os.seekp(0);
-    os << a.size << a.atime <<  a.mtime << a.ctime;
+    os << a;
     os.close();
     
     return extent_protocol::OK;
