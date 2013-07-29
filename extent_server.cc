@@ -56,7 +56,7 @@ extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
     os << attr << buf;
     os.close();
 
-    truncate(local_path(id).c_str(), buf.size() + HEADER_SIZE);
+    // truncate(local_path(id).c_str(), os.tellp());
     
     return extent_protocol::OK;
 }
@@ -65,9 +65,12 @@ int
 extent_server::get(extent_protocol::extentid_t id, std::string &buf)
 {
     extent_protocol::attr attr;
-    std::ifstream is(local_path(id).c_str(), std::ios::binary);
-    if (is.is_open())
+    printf("get %016llx\n", id);
+    std::ifstream is(local_path(id).c_str());
+    if (!is.is_open()) {
+        printf("not exist.\n");
         return extent_protocol::NOENT;
+    }
         
     is >> attr;
     buf.resize(attr.size);
