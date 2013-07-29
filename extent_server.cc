@@ -39,16 +39,17 @@ int
 extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 {
     extent_protocol::attr attr;
+    printf("put into %016llx\n", id);
+    time_t current = time(NULL);
     std::ifstream is(local_path(id).c_str(), std::ios::binary);
     if (is.is_open()) {
         is >> attr;
     } else {
-        time_t current = time(NULL);
-        attr.size = buf.size();
         attr.atime = 0;
-        attr.mtime = current;
         attr.ctime = current;
     }
+    attr.mtime = current;
+    attr.size = buf.size();
     is.close();
 
     std::ofstream os(local_path(id).c_str(), std::ios::trunc);
