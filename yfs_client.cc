@@ -203,6 +203,7 @@ yfs_client::read(inum inum, unsigned offset, unsigned size, std::string &buffer)
     int r = OK;
     std::string content;
 
+    printf("   read %016llx\n", inum);
     if (ec->get(inum, content) != extent_protocol::OK) {
         r = NOENT;
         goto release;
@@ -219,11 +220,12 @@ yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
     int r = OK;
     std::string content;
 
+    printf("   write %016llx offset %u size %u\n", inum, offset, size);
     if (ec->get(inum, content) != extent_protocol::OK) {
         r = NOENT;
         goto release;
     }
-    content = content.substr(0, offset) + buffer;
+    content = content.substr(0, offset) + buffer.substr(0, size);
     if (ec->put(inum, content) != extent_protocol::OK) {
         r = IOERR;
         goto release;
