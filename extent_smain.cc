@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "extent_server.h"
+#include <sys/stat.h>
+#include <sys/types.h>
 
 // Main loop of extent server
 
@@ -25,6 +27,10 @@ main(int argc, char *argv[])
 
     rpcs server(atoi(argv[1]), count);
     extent_server ls;
+    int r;
+
+    mkdir(EXTENT_SERVER_ROOT, 0700);
+    ls.put(1, std::string(), r);
 
     server.reg(extent_protocol::get, &ls, &extent_server::get);
     server.reg(extent_protocol::getattr, &ls, &extent_server::getattr);
