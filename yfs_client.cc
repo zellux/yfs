@@ -88,15 +88,15 @@ yfs_client::getdir(inum inum, dirinfo &din)
 }
 
 int
-yfs_client::lookup(const char *name, inum &inum)
+yfs_client::lookup(const char *name, inum parent, inum &inum)
 {
     int r = OK;
     std::string content;
     std::list<dirent> list;
     std::list<dirent>::iterator iter;
 
-   printf("lookup %s in %016llx\n", name, inum);
-    r = readdir(inum, content);
+    printf("lookup %s in %016llx\n", name, parent);
+    r = readdir(parent, content);
     if (r != OK)
         goto release;
 

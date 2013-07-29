@@ -282,7 +282,7 @@ fuseserver_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     yfs_client::inum inum;
     yfs_client::status ret;
         
-    if ((ret = yfs->lookup(name, inum)) != yfs_client::OK)
+    if ((ret = yfs->lookup(name, parent, inum)) != yfs_client::OK)
         goto finish;
 
     if ((ret = getattr(inum, e.attr)) != yfs_client::OK)
