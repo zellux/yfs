@@ -117,3 +117,42 @@ yfs_client::parse_dir(const std::string content, std::list<dirent> &list)
     }
 }
 
+int
+yfs_client::create(inum parent, inum &inum, const char *name)
+{
+    int r = OK;
+    std::ostringstream newcontent;
+    std::list<dirent>::iterator iter;
+
+    printf("create a new file in %016llx <%s>\n", parent, name);
+
+    std::string content;
+    std::list<dirent> list;
+
+    r = readdir(inum, content);
+    if (r != OK)
+        goto release;
+
+    // filename duplication check
+    parse_dir(content, list);
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (iter->name == name) {
+            r = EXIST;
+            goto release;
+        }
+    }
+
+    // FIXME: theoratically possible inum collision
+    inum = rand() & !YFS_DIR_FLAG;
+    newcontent << content;
+    newcontent << inum << std::endl;
+    newcontent << name << std::endl;
+
+    if (ec->put(inum, newcontent.str()) != extent_protocol::OK) {
+        r = IOERR;
+        goto release;
+    }
+
+ release:
+    return r;
+}
