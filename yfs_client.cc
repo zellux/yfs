@@ -157,7 +157,7 @@ yfs_client::create(inum parent, inum &inum, const char *name)
     std::string content;
     std::list<dirent> list;
 
-    r = readdir(inum, content);
+    r = readdir(parent, content);
     if (r != OK)
         goto release;
 
@@ -171,12 +171,12 @@ yfs_client::create(inum parent, inum &inum, const char *name)
     }
 
     // FIXME: theoratically possible inum collision
-    inum = rand() & !YFS_DIR_FLAG;
+    inum = rand() & ~YFS_DIR_FLAG;
     newcontent << content;
     newcontent << inum << std::endl;
     newcontent << name << std::endl;
 
-    if (ec->put(inum, newcontent.str()) != extent_protocol::OK) {
+    if (ec->put(parent, newcontent.str()) != extent_protocol::OK) {
         r = IOERR;
         goto release;
     }
