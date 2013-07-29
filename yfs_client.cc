@@ -86,3 +86,34 @@ yfs_client::getdir(inum inum, dirinfo &din)
  release:
     return r;
 }
+int
+yfs_client::readdir(inum inum, std::string &content)
+{
+    int r = OK;
+
+    printf("readdir %016llx\n", inum);
+
+    if (ec->get(inum, content) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+
+ release:
+    return r;
+}
+
+void
+yfs_client::parse_dir(const std::string content, std::list<dirent> &list)
+{
+    std::istringstream ist(content);
+    std::string buffer;
+
+    list.clear();
+    while (std::getline(ist, buffer) > 0) {
+        dirent entry;
+        entry.inum = n2i(std::string(buffer));
+        std::getline(ist, entry.name);
+        list.push_back(entry);
+    }
+}
+
