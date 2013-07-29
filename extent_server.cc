@@ -137,3 +137,30 @@ extent_server::remove(extent_protocol::extentid_t id, int &)
  release:
     return ret;
 }
+
+int
+extent_server::setsize(extent_protocol::extentid_t id, unsigned int size)
+{
+    int ret = extent_protocol::OK;
+    std::ifstream is(local_path(id).c_str());
+    std::string temp;
+    extent_protocol::attr attr;
+
+    printf("setsize %016llx\n", id);
+    if (!is.is_open()) {
+        printf("  not exist\n");
+        ret = extent_protocol::NOENT;
+        goto release;
+    }
+    is >> attr;
+    attr.size = size;
+    attr.mtime = time(NULL);
+    temp.resize(attr.size);
+    is.read(&temp[0], attr.size);
+    is.close();
+
+    save(id, attr, temp);
+
+ release:
+    return ret;
+}

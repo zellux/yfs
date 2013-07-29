@@ -184,3 +184,15 @@ yfs_client::create(inum parent, inum &inum, const char *name)
  release:
     return r;
 }
+
+int
+yfs_client::setsize(inum inum, unsigned int size)
+{
+    int r = OK;
+
+    printf("   setsize %016llx\n", inum);
+    if (ec->setsize(inum, size) != extent_protocol::OK)
+        r = NOENT;
+
+    return r;
+}

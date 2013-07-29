@@ -21,6 +21,8 @@ class extent_client {
     extent_protocol::status put(extent_protocol::extentid_t eid,
                                 std::string buf);
     extent_protocol::status remove(extent_protocol::extentid_t eid);
+    extent_protocol::status setsize(extent_protocol::extentid_t eid,
+                                    unsigned int size);
 };
 
 #endif 
