@@ -3,34 +3,41 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "extent_server.h"
+#include <sys/stat.h>
+#include <sys/types.h>
 
 // Main loop of extent server
 
 int
 main(int argc, char *argv[])
 {
-  int count = 0;
+    int count = 0;
 
-  if(argc != 2){
-    fprintf(stderr, "Usage: %s port\n", argv[0]);
-    exit(1);
-  }
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s port\n", argv[0]);
+        exit(1);
+    }
 
-  setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stdout, NULL, _IONBF, 0);
 
-  char *count_env = getenv("RPC_COUNT");
-  if(count_env != NULL){
-    count = atoi(count_env);
-  }
+    char *count_env = getenv("RPC_COUNT");
+    if (count_env != NULL) {
+        count = atoi(count_env);
+    }
 
-  rpcs server(atoi(argv[1]), count);
-  extent_server ls;
+    rpcs server(atoi(argv[1]), count);
+    extent_server ls;
+    int r;
 
-  server.reg(extent_protocol::get, &ls, &extent_server::get);
-  server.reg(extent_protocol::getattr, &ls, &extent_server::getattr);
-  server.reg(extent_protocol::put, &ls, &extent_server::put);
-  server.reg(extent_protocol::remove, &ls, &extent_server::remove);
+    mkdir(EXTENT_SERVER_ROOT, 0700);
+    ls.put(1, std::string(), r);
 
-  while(1)
-    sleep(1000);
+    server.reg(extent_protocol::get, &ls, &extent_server::get);
+    server.reg(extent_protocol::getattr, &ls, &extent_server::getattr);
+    server.reg(extent_protocol::put, &ls, &extent_server::put);
+    server.reg(extent_protocol::remove, &ls, &extent_server::remove);
+    server.reg(extent_protocol::setsize, &ls, &extent_server::setsize);
+
+    while(1)
+        sleep(1000);
 }
