@@ -50,7 +50,9 @@ class yfs_client {
     int getdir(inum, dirinfo &);
     int create(inum, inum &, const char *, bool);
     int readdir(inum, std::vector<dirent> &);
-    int lookup(const char *, inum, inum &);
+    int savedir(inum, const std::vector<dirent> &);
+    int unlink(inum, const char *);
+    int lookup(inum, const char *, inum &);
     int setsize(inum, unsigned int);
     int read(inum, unsigned, unsigned, std::string &);
     int write(inum, unsigned, unsigned, std::string);

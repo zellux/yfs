@@ -94,7 +94,7 @@ yfs_client::getdir(inum inum, dirinfo &din)
 }
 
 int
-yfs_client::lookup(const char *name, inum parent, inum &inum)
+yfs_client::lookup(inum parent, const char *name, inum &inum)
 {
     int r = OK;
     std::string content;
@@ -252,5 +252,56 @@ yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
     }
 
  release:
+    return r;
+}
+
+int
+yfs_client::unlink(inum parent, const char *name)
+{
+    int r = OK;
+    inum inum = 0;
+    std::vector<dirent> list;
+    std::vector<dirent>::iterator iter;
+
+    printf("   unlink %s from %llu\n", name, parent);
+    if ((r = readdir(parent, list)) != OK)
+        goto release;
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (!strcmp(iter->name.c_str(), name)) {
+            inum = iter->inum;
+            list.erase(iter);
+            printf("   found item %llu\n", inum);
+            break;
+        }
+    }
+    if (inum == 0 || isdir(inum)) {
+        r = NOENT;
+        goto release;
+    }
+    if ((r = ec->remove(inum)) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+    savedir(parent, list);
+
+ release:
+    return r;
+}
+
+// Assume lock aquired
+int
+yfs_client::savedir(inum inum, const std::vector<dirent> &list)
+{
+    std::ostringstream content;
+    std::vector<dirent>::const_iterator iter;
+    int r = OK;
+
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        content << iter->inum << std::endl;
+        content << iter->name << std::endl;
+    }
+    if (ec->put(inum, content.str()) != extent_protocol::OK)
+        r = IOERR;
+
     return r;
 }

@@ -49,16 +49,16 @@ int
 extent_server::put(extent_protocol::extentid_t id, std::string buf, int &)
 {
     extent_protocol::attr attr;
-    printf("put into %016llx\n", id);
+    printf("put into %llu 0x%016llx\n", id, id);
     time_t current = time(NULL);
     std::ifstream is(local_path(id).c_str(), std::ios::binary);
     if (is.is_open()) {
         is >> attr;
     } else {
         attr.atime = 0;
-        attr.ctime = current;
     }
     attr.mtime = current;
+    attr.ctime = current;
     attr.size = buf.size();
     is.close();
 
@@ -124,8 +124,8 @@ extent_server::remove(extent_protocol::extentid_t id, int &)
     int ret = extent_protocol::OK;
     std::ifstream is(local_path(id).c_str());
 
-    printf("remove %016llx", id);
-    if (is.is_open()) {
+    printf("remove %lld 0x%016llx\n", id, id);
+    if (!is.is_open()) {
         printf("  not exist\n");
         ret = extent_protocol::NOENT;
         goto release;
@@ -155,6 +155,7 @@ extent_server::setsize(extent_protocol::extentid_t id, unsigned int size, int &)
     is >> attr;
     attr.size = size;
     attr.mtime = time(NULL);
+    attr.ctime = time(NULL);
     temp.resize(attr.size);
     is.read(&temp[0], attr.size);
     is.close();
