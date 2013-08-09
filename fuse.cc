@@ -214,7 +214,7 @@ fuseserver_createhelper(fuse_ino_t parent, const char *name,
     yfs_client::status ret;
     yfs_client::inum inum;
 
-    if ((ret = yfs->create(parent, inum, name)) != yfs_client::OK)
+    if ((ret = yfs->create(parent, inum, name, false)) != yfs_client::OK)
         return ret;
 
     e->ino = inum;
@@ -241,8 +241,8 @@ fuseserver_create(fuse_req_t req, fuse_ino_t parent, const char *name,
     }
 }
 
-void fuseserver_mknod( fuse_req_t req, fuse_ino_t parent,
-                       const char *name, mode_t mode, dev_t rdev ) {
+void fuseserver_mknod(fuse_req_t req, fuse_ino_t parent,
+                      const char *name, mode_t mode, dev_t rdev ) {
     struct fuse_entry_param e;
     yfs_client::status ret;
     if ((ret = fuseserver_createhelper(parent, name, mode, &e)) == yfs_client::OK) {
@@ -378,15 +378,24 @@ fuseserver_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
     e.attr_timeout = 0.0;
     e.entry_timeout = 0.0;
     e.generation = 0;
-    // Suppress compiler warning of unused e.
-    (void) e;
+    yfs_client::status ret;
+    yfs_client::inum inum;
 
-    // You fill this in for Lab 3
-#if 0
+    if ((ret = yfs->create(parent, inum, name, true)) != yfs_client::OK) {
+		if (ret == yfs_client::EXIST) {
+			fuse_reply_err(req, EEXIST);
+		} else {
+			fuse_reply_err(req, ENOENT);
+		}
+        return;
+    }
+
+    e.ino = inum;
+    if ((ret = getattr(inum, e.attr)) != yfs_client::OK) {
+        printf("error fetching attr for newly created node.\n");
+    }
+
     fuse_reply_entry(req, &e);
-#else
-    fuse_reply_err(req, ENOSYS);
-#endif
 }
 
 //

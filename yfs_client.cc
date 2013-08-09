@@ -151,7 +151,7 @@ yfs_client::parse_dir(const std::string content, std::vector<dirent> &list)
 }
 
 int
-yfs_client::create(inum parent, inum &inum, const char *name)
+yfs_client::create(inum parent, inum &inum, const char *name, bool is_dir)
 {
     int r = OK;
     std::string content;
@@ -176,7 +176,11 @@ yfs_client::create(inum parent, inum &inum, const char *name)
     }
 
     // FIXME: theoratically possible inum collision
-    inum = rand() | YFS_DIR_FLAG;
+    if (is_dir)
+        inum = rand() & ~YFS_DIR_FLAG;
+    else
+        inum = rand() | YFS_DIR_FLAG;
+    
     newcontent << content;
     newcontent << inum << std::endl;
     newcontent << name << std::endl;
