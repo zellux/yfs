@@ -13,6 +13,7 @@
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
 {
     ec = new extent_client(extent_dst);
+    lc = new lock_client(lock_dst);
 }
 
 yfs_client::inum
@@ -53,7 +54,8 @@ yfs_client::getfile(inum inum, fileinfo &fin)
     // - hold and release the file lock
     int r = OK;
 
-    printf("getfile %016llx\n", inum);
+    lc->acquire(inum);
+    printf("   getfile %016llx\n", inum);
     extent_protocol::attr a;
     if (ec->getattr(inum, a) != extent_protocol::OK) {
         r = IOERR;
@@ -67,19 +69,17 @@ yfs_client::getfile(inum inum, fileinfo &fin)
     printf("getfile %016llx -> sz %llu\n", inum, fin.size);
 
  release:
-
+    lc->release(inum);
     return r;
 }
 
 int
 yfs_client::getdir(inum inum, dirinfo &din)
 {
-
-    // You modify this function for Lab 3
-    // - hold and release the directory lock
     int r = OK;
 
-    printf("getdir %016llx\n", inum);
+    lc->acquire(inum);
+    printf("   getdir %016llx\n", inum);
     extent_protocol::attr a;
     if (ec->getattr(inum, a) != extent_protocol::OK) {
         r = IOERR;
@@ -90,6 +90,7 @@ yfs_client::getdir(inum inum, dirinfo &din)
     din.ctime = a.ctime;
 
  release:
+    lc->release(inum);
     return r;
 }
 
@@ -101,7 +102,8 @@ yfs_client::lookup(inum parent, const char *name, inum &inum)
     std::vector<dirent> list;
     std::vector<dirent>::iterator iter;
 
-    printf("lookup %s in %016llx\n", name, parent);
+    printf("   lookup %s in %016llx\n", name, parent);
+    // readdir will acquire lock, no need here
     r = readdir(parent, list);
     if (r != OK)
         goto release;
@@ -124,7 +126,8 @@ yfs_client::readdir(inum inum, std::vector<dirent> &list)
     int r = OK;
     std::string content;
 
-    printf("readdir %016llx\n", inum);
+    lc->acquire(inum);
+    printf("   readdir %016llx\n", inum);
     if (ec->get(inum, content) != extent_protocol::OK) {
         r = NOENT;
         goto release;
@@ -132,6 +135,7 @@ yfs_client::readdir(inum inum, std::vector<dirent> &list)
     parse_dir(content, list);
 
  release:
+    lc->release(inum);
     return r;
 }
 
@@ -159,8 +163,9 @@ yfs_client::create(inum parent, inum &inum, const char *name, bool is_dir)
     std::vector<dirent> list;
     std::vector<dirent>::iterator iter;
 
-    printf("create a new file in %016llx <%s>\n", parent, name);
+    printf("   create a new file in %016llx <%s>\n", parent, name);
 
+    lc->acquire(parent);
     if (ec->get(parent, content) != extent_protocol::OK) {
         r = NOENT;
         goto release;
@@ -175,7 +180,6 @@ yfs_client::create(inum parent, inum &inum, const char *name, bool is_dir)
         }
     }
 
-    // FIXME: theoratically possible inum collision
     if (is_dir)
         inum = rand() & ~YFS_DIR_FLAG;
     else
@@ -192,6 +196,7 @@ yfs_client::create(inum parent, inum &inum, const char *name, bool is_dir)
     }
 
  release:
+    lc->release(parent);
     return r;
 }
 
@@ -200,10 +205,12 @@ yfs_client::setsize(inum inum, unsigned int size)
 {
     int r = OK;
 
+    lc->acquire(inum);
     printf("   setsize %016llx\n", inum);
     if (ec->setsize(inum, size) != extent_protocol::OK)
         r = NOENT;
 
+    lc->release(inum);
     return r;
 }
 
@@ -213,6 +220,7 @@ yfs_client::read(inum inum, unsigned offset, unsigned size, std::string &buffer)
     int r = OK;
     std::string content;
 
+    lc->acquire(inum);
     printf("   read %016llx\n", inum);
     if (ec->get(inum, content) != extent_protocol::OK) {
         r = NOENT;
@@ -221,6 +229,7 @@ yfs_client::read(inum inum, unsigned offset, unsigned size, std::string &buffer)
     buffer = content.substr(offset, size);
 
  release:
+    lc->release(inum);
     return r;
 }
 
@@ -231,6 +240,7 @@ yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
     std::string content;
     std::string head, mid, tail;
 
+    lc->acquire(inum);
     printf("   write %016llx offset %u size %u buffer size %lu\n",
            inum, offset, size, buffer.length());
     if (ec->get(inum, content) != extent_protocol::OK) {
@@ -253,6 +263,7 @@ yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
     }
 
  release:
+    lc->release(inum);
     return r;
 }
 
@@ -261,12 +272,18 @@ yfs_client::unlink(inum parent, const char *name)
 {
     int r = OK;
     inum inum = 0;
+    std::string content;
     std::vector<dirent> list;
     std::vector<dirent>::iterator iter;
 
     printf("   unlink %s from %llu\n", name, parent);
-    if ((r = readdir(parent, list)) != OK)
+    lc->acquire(parent);
+    if (ec->get(parent, content) != extent_protocol::OK) {
+        r = NOENT;
         goto release;
+    }
+    parse_dir(content, list);
+
     for (iter = list.begin(); iter != list.end(); iter++) {
         if (!strcmp(iter->name.c_str(), name)) {
             inum = iter->inum;
@@ -286,6 +303,7 @@ yfs_client::unlink(inum parent, const char *name)
     savedir(parent, list);
 
  release:
+    lc->release(parent);
     return r;
 }
 

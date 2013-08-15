@@ -11,6 +11,7 @@
 
 class yfs_client {
     extent_client *ec;
+    lock_client *lc;
  public:
     static const int MAX_FILENAME_LENGTH = 256;
 
