@@ -231,7 +231,8 @@ yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
     std::string content;
     std::string head, mid, tail;
 
-    printf("   write %016llx offset %u size %u\n", inum, offset, size);
+    printf("   write %016llx offset %u size %u buffer size %lu\n",
+           inum, offset, size, buffer.length());
     if (ec->get(inum, content) != extent_protocol::OK) {
         r = NOENT;
         goto release;
@@ -242,9 +243,9 @@ yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
     mid = buffer.substr(0, size);
     if (offset + size < content.size())
         tail = content.substr(offset + size, content.size() - offset - size);
-    printf("   head: %s\n", head.c_str());
-    printf("   mid : %s\n", mid.c_str());
-    printf("   tail: %s\n", tail.c_str());
+    printf("   head size: %lu\n", head.length());
+    printf("   mid  size: %lu\n", mid.length());
+    printf("   tail size: %lu\n", tail.length());
     content = head + mid + tail;
     if (ec->put(inum, content) != extent_protocol::OK) {
         r = IOERR;

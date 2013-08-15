@@ -180,7 +180,7 @@ fuseserver_write(fuse_req_t req, fuse_ino_t ino,
 {
     yfs_client::inum inum = ino;
 
-    yfs->write(inum, off, size, buf);
+    yfs->write(inum, off, size, std::string(buf, size));
     fuse_reply_write(req, size);
 }
 
