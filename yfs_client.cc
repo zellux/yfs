@@ -10,89 +10,317 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
 yfs_client::yfs_client(std::string extent_dst, std::string lock_dst)
 {
-  ec = new extent_client(extent_dst);
-
+    ec = new extent_client(extent_dst);
+    lc = new lock_client(lock_dst);
 }
 
 yfs_client::inum
 yfs_client::n2i(std::string n)
 {
-  std::istringstream ist(n);
-  unsigned long long finum;
-  ist >> finum;
-  return finum;
+    std::istringstream ist(n);
+    unsigned long long finum;
+    ist >> finum;
+    return finum;
 }
 
 std::string
 yfs_client::filename(inum inum)
 {
-  std::ostringstream ost;
-  ost << inum;
-  return ost.str();
+    std::ostringstream ost;
+    ost << inum;
+    return ost.str();
 }
 
 bool
 yfs_client::isfile(inum inum)
 {
-  if(inum & 0x80000000)
-    return true;
-  return false;
+    if (inum & YFS_DIR_FLAG)
+        return true;
+    return false;
 }
 
 bool
 yfs_client::isdir(inum inum)
 {
-  return ! isfile(inum);
+    return !isfile(inum);
 }
 
 int
 yfs_client::getfile(inum inum, fileinfo &fin)
 {
-  int r = OK;
-  // You modify this function for Lab 3
-  // - hold and release the file lock
+    // You modify this function for Lab 3
+    // - hold and release the file lock
+    int r = OK;
 
-  printf("getfile %016llx\n", inum);
-  extent_protocol::attr a;
-  if (ec->getattr(inum, a) != extent_protocol::OK) {
-    r = IOERR;
-    goto release;
-  }
+    lc->acquire(inum);
+    printf("   getfile %016llx\n", inum);
+    extent_protocol::attr a;
+    if (ec->getattr(inum, a) != extent_protocol::OK) {
+        r = IOERR;
+        goto release;
+    }
 
-  fin.atime = a.atime;
-  fin.mtime = a.mtime;
-  fin.ctime = a.ctime;
-  fin.size = a.size;
-  printf("getfile %016llx -> sz %llu\n", inum, fin.size);
+    fin.atime = a.atime;
+    fin.mtime = a.mtime;
+    fin.ctime = a.ctime;
+    fin.size = a.size;
+    printf("getfile %016llx -> sz %llu\n", inum, fin.size);
 
  release:
-
-  return r;
+    lc->release(inum);
+    return r;
 }
 
 int
 yfs_client::getdir(inum inum, dirinfo &din)
 {
-  int r = OK;
-  // You modify this function for Lab 3
-  // - hold and release the directory lock
+    int r = OK;
 
-  printf("getdir %016llx\n", inum);
-  extent_protocol::attr a;
-  if (ec->getattr(inum, a) != extent_protocol::OK) {
-    r = IOERR;
-    goto release;
-  }
-  din.atime = a.atime;
-  din.mtime = a.mtime;
-  din.ctime = a.ctime;
+    lc->acquire(inum);
+    printf("   getdir %016llx\n", inum);
+    extent_protocol::attr a;
+    if (ec->getattr(inum, a) != extent_protocol::OK) {
+        r = IOERR;
+        goto release;
+    }
+    din.atime = a.atime;
+    din.mtime = a.mtime;
+    din.ctime = a.ctime;
 
  release:
-  return r;
+    lc->release(inum);
+    return r;
 }
 
+int
+yfs_client::lookup(inum parent, const char *name, inum &inum)
+{
+    int r = OK;
+    std::string content;
+    std::vector<dirent> list;
+    std::vector<dirent>::iterator iter;
 
+    printf("   lookup %s in %016llx\n", name, parent);
+    // readdir will acquire lock, no need here
+    r = readdir(parent, list);
+    if (r != OK)
+        goto release;
 
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (iter->name == name) {
+            inum = iter->inum;
+            goto release;
+        }
+    }
+    r = NOENT;
+
+ release:
+    return r;
+}
+
+int
+yfs_client::readdir(inum inum, std::vector<dirent> &list)
+{
+    int r = OK;
+    std::string content;
+
+    lc->acquire(inum);
+    printf("   readdir %016llx\n", inum);
+    if (ec->get(inum, content) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+    parse_dir(content, list);
+
+ release:
+    lc->release(inum);
+    return r;
+}
+
+void
+yfs_client::parse_dir(const std::string content, std::vector<dirent> &list)
+{
+    std::istringstream ist(content);
+    std::string buffer;
+
+    list.clear();
+    while (std::getline(ist, buffer) > 0) {
+        dirent entry;
+        entry.inum = n2i(std::string(buffer));
+        std::getline(ist, entry.name);
+        list.push_back(entry);
+    }
+}
+
+int
+yfs_client::create(inum parent, inum &inum, const char *name, bool is_dir)
+{
+    int r = OK;
+    std::string content;
+    std::ostringstream newcontent;
+    std::vector<dirent> list;
+    std::vector<dirent>::iterator iter;
+
+    printf("   create a new file in %016llx <%s>\n", parent, name);
+
+    lc->acquire(parent);
+    if (ec->get(parent, content) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+
+    // filename duplication check
+    parse_dir(content, list);
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (iter->name == name) {
+            r = EXIST;
+            goto release;
+        }
+    }
+
+    if (is_dir)
+        inum = rand() & ~YFS_DIR_FLAG;
+    else
+        inum = rand() | YFS_DIR_FLAG;
+    
+    newcontent << content;
+    newcontent << inum << std::endl;
+    newcontent << name << std::endl;
+
+    if ((ec->put(parent, newcontent.str()) != extent_protocol::OK) ||
+        (ec->put(inum, std::string()) != extent_protocol::OK)) {
+        r = IOERR;
+        goto release;
+    }
+
+ release:
+    lc->release(parent);
+    return r;
+}
+
+int
+yfs_client::setsize(inum inum, unsigned int size)
+{
+    int r = OK;
+
+    lc->acquire(inum);
+    printf("   setsize %016llx\n", inum);
+    if (ec->setsize(inum, size) != extent_protocol::OK)
+        r = NOENT;
+
+    lc->release(inum);
+    return r;
+}
+
+int
+yfs_client::read(inum inum, unsigned offset, unsigned size, std::string &buffer)
+{
+    int r = OK;
+    std::string content;
+
+    lc->acquire(inum);
+    printf("   read %016llx\n", inum);
+    if (ec->get(inum, content) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+    buffer = content.substr(offset, size);
+
+ release:
+    lc->release(inum);
+    return r;
+}
+
+int
+yfs_client::write(inum inum, unsigned offset, unsigned size, std::string buffer)
+{
+    int r = OK;
+    std::string content;
+    std::string head, mid, tail;
+
+    lc->acquire(inum);
+    printf("   write %016llx offset %u size %u buffer size %lu\n",
+           inum, offset, size, buffer.length());
+    if (ec->get(inum, content) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+    head = content.substr(0, offset);
+    if (offset > content.size())
+        head += std::string(offset - content.size(), '\0');
+    mid = buffer.substr(0, size);
+    if (offset + size < content.size())
+        tail = content.substr(offset + size, content.size() - offset - size);
+    printf("   head size: %lu\n", head.length());
+    printf("   mid  size: %lu\n", mid.length());
+    printf("   tail size: %lu\n", tail.length());
+    content = head + mid + tail;
+    if (ec->put(inum, content) != extent_protocol::OK) {
+        r = IOERR;
+        goto release;
+    }
+
+ release:
+    lc->release(inum);
+    return r;
+}
+
+int
+yfs_client::unlink(inum parent, const char *name)
+{
+    int r = OK;
+    inum inum = 0;
+    std::string content;
+    std::vector<dirent> list;
+    std::vector<dirent>::iterator iter;
+
+    printf("   unlink %s from %llu\n", name, parent);
+    lc->acquire(parent);
+    if (ec->get(parent, content) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+    parse_dir(content, list);
+
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        if (!strcmp(iter->name.c_str(), name)) {
+            inum = iter->inum;
+            list.erase(iter);
+            printf("   found item %llu\n", inum);
+            break;
+        }
+    }
+    if (inum == 0 || isdir(inum)) {
+        r = NOENT;
+        goto release;
+    }
+    if ((r = ec->remove(inum)) != extent_protocol::OK) {
+        r = NOENT;
+        goto release;
+    }
+    savedir(parent, list);
+
+ release:
+    lc->release(parent);
+    return r;
+}
+
+// Assume lock aquired
+int
+yfs_client::savedir(inum inum, const std::vector<dirent> &list)
+{
+    std::ostringstream content;
+    std::vector<dirent>::const_iterator iter;
+    int r = OK;
+
+    for (iter = list.begin(); iter != list.end(); iter++) {
+        content << iter->inum << std::endl;
+        content << iter->name << std::endl;
+    }
+    if (ec->put(inum, content.str()) != extent_protocol::OK)
+        r = IOERR;
+
+    return r;
+}

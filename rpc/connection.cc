@@ -444,5 +444,3 @@ connect_to_dst(const sockaddr_in &dst, chanmgr *mgr, int lossy)
 			s, inet_ntoa(dst.sin_addr), (int)ntohs(dst.sin_port));
 	return new connection(mgr, s, lossy);
 }
-
-

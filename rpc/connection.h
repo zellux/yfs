@@ -44,7 +44,7 @@ class connection : public aio_callback {
 		void decref();
 		int ref();
                 
-                int compare(connection *another);
+        int compare(connection *another);
 	private:
 
 		bool readpdu();
